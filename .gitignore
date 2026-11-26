@@ -1,0 +1,8 @@
+__pycache__/
+*.py[cod]
+.DS_Store
+cinema.db
+cinema.db-wal
+cinema.db-shm
+cinema.db-journal
+.env
