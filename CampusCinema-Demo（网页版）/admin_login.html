@@ -1,0 +1,22 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>管理员登录 · Campus Cinema</title>
+<link rel="stylesheet" href="/cinema.css">
+<main class="login"><form id="login" class="card"><h1>管理员登录</h1><label for="username">账号</label><input id="username" name="username" autocomplete="username" required><label for="password">密码</label><input id="password" name="password" type="password" autocomplete="current-password" required><button class="primary">登录</button><p id="loginError" role="alert"></p></form></main>
+<script>
+const form = document.querySelector('#login');
+const error = document.querySelector('#loginError');
+form.onsubmit = async event => {
+    event.preventDefault();
+    error.textContent = '';
+    try {
+        const response = await fetch('/api/admin/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(Object.fromEntries(new FormData(form)))
+        });
+        if (!response.ok) throw Error((await response.json()).error);
+        window.location.replace('/admin');
+    } catch (e) {
+        error.textContent = e.message;
+    }
+};
+</script></html>
