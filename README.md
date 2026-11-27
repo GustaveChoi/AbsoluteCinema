@@ -2,6 +2,10 @@
 
 11 月 19 日初步思路汇报 Demo。Python 标准库 + SQLite + 原生 HTML/CSS/JavaScript，无第三方依赖，无需联网。所有电影、用户和性能数据集均为合成数据。
 
+## GitHub 同步
+
+首次在另一台电脑上开发时，在 VS Code 运行 **Git: Clone**，输入 `https://github.com/GustaveChoi/CampusCinema.git` 并打开克隆后的文件夹。之后在 **Source Control** 暂存并提交改动，再点 **Push** 上传。如果 GitHub 上已有新的提交，先 **Pull** 同步，再推送本地提交。
+
 ## 运行
 
 安装 Python 3.10 或更新版本。在 macOS 终端进入本目录后运行 `python3 app.py`。Windows 可以双击 `start.bat`，也可以在本目录运行 `python app.py`。
