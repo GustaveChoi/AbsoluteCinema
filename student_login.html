@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>学生登录 · Campus Cinema</title>
+<link rel="stylesheet" href="/cinema.css">
+<header><div class="brand"><b>◉</b>Campus Cinema</div><div class="tag">校园影院 · 学生购票</div></header>
+<main>
+  <form id="studentAuth" method="post" action="/api/student/login" class="card student-login">
+    <h1>学生登录</h1>
+    <p>首次使用请注册学生账号。</p>
+    <label for="username">用户名</label>
+    <input id="username" name="username" autocomplete="username" maxlength="32" required>
+    <label for="password">密码</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" maxlength="128" required>
+    <div class="actions">
+      <button class="primary" type="submit" value="login">登录</button>
+      <button type="submit" value="register">注册并登录</button>
+    </div>
+    <p id="authError" role="alert" hidden></p>
+  </form>
+</main>
+<script>
+const form = document.querySelector('#studentAuth');
+const error = document.querySelector('#authError');
+form.addEventListener('submit', async event => {
+  event.preventDefault();
+  const action = event.submitter?.value || 'login';
+  const buttons = [...form.querySelectorAll('button')];
+  buttons.forEach(button => button.disabled = true);
+  error.hidden = true;
+  try {
+    const response = await fetch('/api/student/' + action, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(Object.fromEntries(new FormData(form)))
+    });
+    const result = await response.json();
+    if (!response.ok) throw Error(result.error);
+    location.reload();
+  } catch (failure) {
+    error.textContent = failure.message;
+    error.hidden = false;
+    buttons.forEach(button => button.disabled = false);
+  }
+});
+</script>
+</html>
