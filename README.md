@@ -4,7 +4,7 @@
 
 ## GitHub 同步
 
-首次在另一台电脑上开发时，在 VS Code 运行 **Git: Clone**，输入 `https://github.com/GustaveChoi/CampusCinema.git` 并打开克隆后的文件夹。之后在 **Source Control** 暂存并提交改动，再点 **Push** 上传。如果 GitHub 上已有新的提交，先 **Pull** 同步，再推送本地提交。
+首次在另一台电脑上开发时，在 VS Code 运行 **Git: Clone**，输入 `https://github.com/GustaveChoi/AbsoluteCinema.git` 并打开克隆后的文件夹。之后在 **Source Control** 暂存并提交改动，再点 **Push** 上传。如果 GitHub 上已有新的提交，先 **Pull** 同步，再推送本地提交。
 
 ## 运行
 

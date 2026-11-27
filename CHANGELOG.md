@@ -3,7 +3,7 @@
 ## 2026-11-27 · 合并本地与 GitHub 的提交历史
 
 - 保留当前根目录的项目入口和 GitHub 的既有提交。旧子目录中的重复项目文件、数据库和 Python 缓存仍可从 GitHub 的旧提交查看。
-- `README.md` 补充 GitHub 克隆和同步步骤。
+- `README.md` 补充 GitHub 克隆和同步步骤，使用仓库迁移后的地址 `GustaveChoi/AbsoluteCinema`。
 
 ## 2026-11-26 · 固定演示管理员密码
 
