@@ -1,5 +1,9 @@
 """Integration checks with a disposable database; never touch cinema.db."""
 import unittest,tempfile,threading,json,time,urllib.request,urllib.error
+import os
+import shutil
+import subprocess
+import sys
 from pathlib import Path
 from unittest.mock import patch
 import app
@@ -150,5 +154,54 @@ class DemoTest(unittest.TestCase):
             self.assertEqual(result['races'][-1]['success'],1)
             self.assertEqual(result['races'][-1]['errors'],0)
             self.assertTrue((Path(directory)/'性能对比.csv').is_file())
+
+class LanStartupTest(unittest.TestCase):
+    def test_lan_booking(self):
+        hostname, addresses = app.lan_hosts()
+        if not addresses:
+            self.skipTest('没有可测试的非回环 IPv4 地址')
+        with tempfile.TemporaryDirectory() as directory:
+            for name in ('app.py', 'schema.sql', 'index.html', 'cinema.css', 'demo-password.txt'):
+                shutil.copy(app.ROOT/name, directory)
+            command = [sys.executable, 'app.py', '--lan']
+            if sys.platform == 'darwin':
+                launcher = shutil.copy(app.ROOT/'start-lan.command', directory)
+                command = [launcher]
+            with subprocess.Popen([*command, '--port', '0'],
+                                  cwd=directory, stdout=subprocess.PIPE, text=True,
+                                  env={**os.environ, 'CINEMA_ADMIN_USER':'', 'CINEMA_ADMIN_PASSWORD':''}) as process:
+                try:
+                    local = process.stdout.readline().strip()
+                    self.assertTrue(local.startswith('Student: http://127.0.0.1:'))
+                    port = urllib.parse.urlsplit(local.split(' ', 1)[1]).port
+                    base = f'http://{addresses[0]}:{port}'
+                    client = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
+                    def request(path, data=None):
+                        body = None if data is None else json.dumps(data).encode()
+                        req = urllib.request.Request(base+path, body, headers={
+                            'Origin':base, 'Content-Type':'application/json'})
+                        with client.open(req, timeout=5) as response:
+                            return response.read()
+
+                    self.assertIn('Campus Cinema', request('/').decode())
+                    self.assertTrue(request('/cinema.css'))
+                    login = request('/api/admin/login', {'username':'admin', 'password':'123456'})
+                    self.assertEqual(json.loads(login)['message'], '登录成功')
+                    order = json.loads(request('/api/book', {'user':1,'screening':1,'seat':1}))
+                    request('/api/order', {'user':1,'id':order['id'],'status':'paid'})
+                    self.assertEqual(json.loads(request('/api/orders?user=1'))[0]['status'],'paid')
+                    print(f'LAN HTTP booking verified: {base}', flush=True)
+                    try:
+                        resolved = app.socket.gethostbyname_ex(hostname)[2]
+                    except OSError:
+                        resolved = []
+                    if set(resolved).intersection(addresses):
+                        with client.open(f'http://{hostname}:{port}/', timeout=5) as response:
+                            self.assertIn(b'Campus Cinema', response.read())
+                        print(f'LAN hostname verified: {hostname}', flush=True)
+                finally:
+                    process.terminate()
+
 
 if __name__=='__main__':unittest.main(verbosity=2)

@@ -1,5 +1,9 @@
-"""Campus Cinema: Python standard library only; localhost teaching demo."""
+"""Campus Cinema: Python standard library only; local and LAN teaching demo."""
 import json, sqlite3, threading, argparse, os, secrets, time, logging
+import socket
+import subprocess
+import sys
+from ipaddress import IPv4Address
 from http.cookies import CookieError, SimpleCookie
 from pathlib import Path
 from http.server import ThreadingHTTPServer, BaseHTTPRequestHandler
@@ -224,19 +228,62 @@ class Handler(BaseHTTPRequestHandler):
         except sqlite3.IntegrityError as e:self.reply({'error':'座位已被占用，或操作违反外键/唯一约束。请刷新重试。','detail':str(e)},409)
         except (ValueError,KeyError,TypeError,sqlite3.Error) as e:self.reply({'error':str(e)},400)
 
+def mac_setting(*command):
+    try:
+        return subprocess.check_output(command, text=True, stderr=subprocess.DEVNULL,
+                                       timeout=2).strip()
+    except (OSError, subprocess.SubprocessError):
+        return ''
+
+
+def lan_hosts():
+    hostname = socket.gethostname()
+    addresses = []
+    if sys.platform == 'darwin':
+        label = mac_setting('/usr/sbin/scutil', '--get', 'LocalHostName')
+        hostname = label + '.local' if label else hostname
+        for interface in ('en0', 'en1'):
+            address = mac_setting('/usr/sbin/ipconfig', 'getifaddr', interface)
+            if address:
+                addresses.append(address)
+    try:
+        addresses.extend(socket.gethostbyname_ex(socket.gethostname())[2])
+    except OSError:
+        pass
+    # A UDP route lookup selects a local interface without sending a packet.
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as route:
+        try:
+            route.connect(('192.0.2.1', 9))
+            addresses.append(route.getsockname()[0])
+        except OSError:
+            pass
+    ips = [ip for ip in dict.fromkeys(addresses)
+           if not IPv4Address(ip).is_loopback and not IPv4Address(ip).is_unspecified]
+    return hostname, ips
+
+
 if __name__=='__main__':
-    parser=argparse.ArgumentParser();parser.add_argument('--port',type=int,default=8766);args=parser.parse_args()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--port', type=int, default=8766)
+    parser.add_argument('--lan', action='store_true', help='accept connections on all IPv4 interfaces')
+    args = parser.parse_args()
     username = os.getenv('CINEMA_ADMIN_USER') or 'admin'
-    configured_password = os.getenv('CINEMA_ADMIN_PASSWORD')
-    password = configured_password or secrets.token_urlsafe(15)
+    password = os.getenv('CINEMA_ADMIN_PASSWORD') or (ROOT/'demo-password.txt').read_text(encoding='utf-8').strip()
     init()
-    with CinemaServer(('127.0.0.1',args.port), username, password) as server:
+    host = '0.0.0.0' if args.lan else '127.0.0.1'
+    with CinemaServer((host,args.port), username, password) as server:
         with connect() as c:
             release_expired(c)
         base = f'http://127.0.0.1:{server.server_port}'
         print(f'Student: {base}/\nAdmin:   {base}/admin\nAdmin username: {username}', flush=True)
-        if not configured_password:
-            print(f'Temporary admin password: {password}', flush=True)
+        if args.lan:
+            hostname, addresses = lan_hosts()
+            print(f'LAN name (if resolved by client): http://{hostname}:{server.server_port}/')
+            for address in addresses:
+                print(f'LAN IP: http://{address}:{server.server_port}/')
+            if not addresses:
+                print('Check the Wi-Fi IPv4 address in network settings.')
+            sys.stdout.flush()
         stop = threading.Event()
         sweeper = threading.Thread(target=sweep_expired, args=(stop,), daemon=True)
         sweeper.start()
